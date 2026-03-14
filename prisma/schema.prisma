@@ -1,0 +1,80 @@
+// LearnLore - Prisma Schema
+// AI-Powered Story-Based Learning Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  documents Document[]
+  progress  UserProgress[]
+}
+
+model Document {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  fileType  String   // pdf, docx, txt
+  rawText   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  concepts Concept[]
+}
+
+model Concept {
+  id           String   @id @default(uuid())
+  documentId   String
+  document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  name         String
+  originalText String   @db.Text
+  category     String   // formula, law, definition, term
+  createdAt    DateTime @default(now())
+
+  story Story?
+}
+
+model Story {
+  id          String   @id @default(uuid())
+  conceptId   String   @unique
+  concept     Concept  @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  storyText   String   @db.Text
+  memoryHook  String
+  createdAt   DateTime @default(now())
+
+  progress UserProgress[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model UserProgress {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storyId      String
+  story        Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  masteryLevel Int      @default(1) // 1-5
+  reviewedAt   DateTime @updatedAt
+  createdAt    DateTime @default(now())
+
+  @@unique([userId, storyId])
+}
