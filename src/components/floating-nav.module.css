@@ -1,0 +1,78 @@
+.root {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 30;
+}
+
+.panel {
+  position: absolute;
+  right: 0;
+  bottom: 58px;
+  min-width: 72px;
+  padding: 8px;
+  border: 1px solid rgba(141, 181, 128, 0.2);
+  border-radius: 16px;
+  background: rgba(254, 252, 248, 0.95);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(61, 57, 41, 0.18);
+  animation: scale-in 0.2s ease-out;
+}
+
+.routeLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1.5px solid #5b7a4a;
+  border-radius: 10px;
+  background: rgba(141, 181, 128, 0.12);
+  color: #5b7a4a;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: 1.5px solid rgba(141, 181, 128, 0.2);
+  border-radius: 14px;
+  background: rgba(254, 252, 248, 0.95);
+  color: #5b7a4a;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(61, 57, 41, 0.18);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(61, 57, 41, 0.22);
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .root {
+    right: 16px;
+    bottom: 16px;
+  }
+}
