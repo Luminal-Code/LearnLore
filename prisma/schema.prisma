@@ -11,16 +11,31 @@ datasource db {
 }
 
 model User {
-  id           String     @id @default(uuid())
-  email        String     @unique
+  id           String           @id @default(uuid())
+  displayName  String
   passwordHash String
-  name         String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  role         String           @default("user")
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
-  documents Document[]
-  progress  UserProgress[]
+  identifiers UserIdentifier[]
+  sessions    Session[]
+  documents   Document[]
+  progress    UserProgress[]
 
+  @@schema("learnlore")
+}
+
+model UserIdentifier {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  identifierType  String
+  identifierValue String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([identifierType, identifierValue])
   @@schema("learnlore")
 }
 
@@ -58,7 +73,7 @@ model Story {
   conceptId   String   @unique
   concept     Concept  @relation(fields: [conceptId], references: [id], onDelete: Cascade)
   storyText   String   @db.Text
-  memoryHook  String
+  memoryHooks  String[]
   createdAt   DateTime @default(now())
 
   progress UserProgress[]
@@ -67,11 +82,12 @@ model Story {
 }
 
 model Session {
-  id        String   @id @default(uuid())
-  userId    String
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
 
   @@schema("learnlore")
 }

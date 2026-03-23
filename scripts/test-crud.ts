@@ -20,9 +20,17 @@ async function testCRUD() {
   console.log('1. CREATE: Inserting a test user...');
   const user = await db.user.create({
     data: {
-      email: `test-${Date.now()}@example.com`,
+      displayName: 'Test User',
       passwordHash: 'hashed_password_123',
-      name: 'Test User',
+      identifiers: {
+        create: {
+          identifierType: 'email',
+          identifierValue: `test-${Date.now()}@example.com`,
+        },
+      },
+    },
+    include: {
+      identifiers: true,
     },
   });
   console.log('   Created:', user);
@@ -34,11 +42,11 @@ async function testCRUD() {
   });
   console.log('   Found:', foundUser);
 
-  // UPDATE - Update the user's name
-  console.log('\n3. UPDATE: Updating the user\'s name...');
+  // UPDATE - Update the user's display name
+  console.log('\n3. UPDATE: Updating the user\'s display name...');
   const updatedUser = await db.user.update({
     where: { id: user.id },
-    data: { name: 'Updated Test User' },
+    data: { displayName: 'Updated Test User' },
   });
   console.log('   Updated:', updatedUser);
 
