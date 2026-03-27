@@ -1,17 +1,16 @@
-import { config as dotenvConfig } from 'dotenv';
-dotenvConfig({ path: '.env.local' });
 import { PrismaClient } from '@prisma/client';
-import { PrismaNeon } from '@prisma/adapter-neon';
-import { neonConfig } from '@neondatabase/serverless';
-import ws from 'ws';
-
-neonConfig.webSocketConstructor = ws;
+import { PrismaPg } from '@prisma/adapter-pg';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-const adapter = new PrismaNeon({
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL is not defined');
+}
+
+// Runtime app traffic uses Neon pooling through the pg driver adapter.
+const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
 });
 

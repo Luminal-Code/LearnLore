@@ -5,6 +5,7 @@ import {
   exchangeGoogleCode,
   findOrCreateGoogleUser,
   getGoogleUserInfo,
+  oauthErrorToDebugString,
 } from '@/lib/auth/oauth';
 import { validateState } from '@/lib/auth/oauth-state';
 import { createSession, setSessionCookieForOAuthCallback } from '@/lib/auth/session';
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
 
   const userId = await findOrCreateGoogleUser(userInfo.value);
   if (userId.type === 'Err') {
-    return jsonResponse(500, apiError(`Failed to authenticate user: ${JSON.stringify(userId.error)}`));
+    return jsonResponse(500, apiError(`Failed to authenticate user: ${oauthErrorToDebugString(userId.error)}`));
   }
 
   const sessionToken = await createSession(userId.value);

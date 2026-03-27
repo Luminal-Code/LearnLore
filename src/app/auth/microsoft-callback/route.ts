@@ -5,6 +5,7 @@ import {
   createMicrosoftProvider,
   handleProviderCallback,
   oauthErrorToString,
+  oauthErrorToDebugString,
 } from '@/lib/auth/oauth';
 import { setSessionCookieForOAuthCallback } from '@/lib/auth/session';
 
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (result.error.type === 'UserNotFound' || result.error.type === 'DatabaseError') {
-      return jsonResponse(500, apiError(`Failed to authenticate user: ${JSON.stringify(result.error)}`));
+      return jsonResponse(500, apiError(`Failed to authenticate user: ${oauthErrorToDebugString(result.error)}`));
     }
     return jsonResponse(500, apiError('Internal server error'));
   }

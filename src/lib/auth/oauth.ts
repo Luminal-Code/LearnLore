@@ -5,6 +5,8 @@ import { generateState, validateState } from '@/lib/auth/oauth-state';
 import { createSession } from '@/lib/auth/session';
 import { generateToken } from '@/lib/auth/token-generator';
 import type { GoogleTokenResponse, GoogleUser, ProviderUser, TokenResponse } from '@/lib/auth/types';
+import { Prisma } from '@prisma/client';
+import { inspect } from 'node:util';
 
 interface OAuthProvider {
   providerName(): string;
@@ -114,6 +116,40 @@ export function oauthErrorToString(error: OAuthError): string {
     case 'InvalidResponse':
       return 'Invalid response from OAuth provider';
   }
+}
+
+export function oauthErrorToDebugString(error: OAuthError): string {
+  if (error.type !== 'DatabaseError') {
+    return oauthErrorToString(error);
+  }
+
+  const cause = error.cause;
+
+  if (cause instanceof Prisma.PrismaClientKnownRequestError) {
+    return `Database error (${cause.code}): ${cause.message}`;
+  }
+
+  if (cause instanceof Prisma.PrismaClientValidationError) {
+    return `Database validation error: ${cause.message}`;
+  }
+
+  if (cause instanceof Prisma.PrismaClientInitializationError) {
+    return `Database initialization error: ${cause.message}`;
+  }
+
+  if (cause instanceof Prisma.PrismaClientRustPanicError) {
+    return `Database panic: ${cause.message}`;
+  }
+
+  if (cause instanceof Error) {
+    const details = Object.fromEntries(
+      Object.getOwnPropertyNames(cause).map((key) => [key, Reflect.get(cause, key)]),
+    );
+    const inspected = inspect(details, { depth: 6, breakLength: Infinity });
+    return `Database error: ${cause.message}${inspected === '{}' ? '' : ` | details: ${inspected}`}`;
+  }
+
+  return `Database error: ${inspect(cause, { depth: 6, breakLength: Infinity })}`;
 }
 
 export function stateErrorToString(error: StateError): string {
