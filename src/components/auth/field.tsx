@@ -29,12 +29,12 @@ export function Field({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         required
-        className="mt-1 mb-0.5 rounded-2xl border-2 border-stone-200 bg-[#f4efe7] px-3 py-2 outline-none transition-all focus:border-[#8db580] focus:ring-4 focus:ring-[#8db580]/20 dark:border-[#313626] dark:bg-[#23271b] dark:text-stone-100 dark:placeholder:text-stone-500"
+        className="mt-1 mb-0.5 rounded-2xl border-2 border-stone-200 bg-[#f4efe7] px-3 py-2 outline-none transition-all focus:border-[#8db580] focus:ring-4 focus:ring-[#8db580]/20 dark:border-[#313626] dark:bg-[#23271b] dark:text-stone-100 dark:placeholder:text-stone-500  [@media(max-height:615px)_and_(max-height:640px)]:text-[.90rem]"
       />
       {error ? (
         <p className="text-[0.9rem] text-rose-500">{error}</p>
       ) : (
-        <p className="text-[0.9rem] text-stone-600 dark:text-stone-400">{hint}</p>
+        <p className="text-[0.9rem] text-stone-600 dark:text-stone-400 ">{hint}</p>
       )}
     </label>
   );
