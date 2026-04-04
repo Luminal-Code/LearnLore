@@ -10,7 +10,7 @@ export function SocialButtons({
   onMicrosoft,
 }: SocialButtonsProps) {
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 w-full">
       <button
         type="button"
         onClick={onGoogle}
