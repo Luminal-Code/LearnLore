@@ -65,6 +65,13 @@
   box-shadow: 0 8px 20px rgba(141, 181, 128, 0.32);
 }
 
+.newButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+  transform: none;
+  box-shadow: 0 4px 16px rgba(141, 181, 128, 0.2);
+}
+
 .recentLabelWrap {
   margin-bottom: 8px;
   padding: 0 16px;
@@ -241,6 +248,11 @@
   font-size: 14px;
 }
 
+.composerForm {
+  display: flex;
+  flex-direction: column;
+}
+
 .textInput {
   width: 100%;
   margin-bottom: 20px;
@@ -254,11 +266,18 @@
   padding: 18px 20px;
 }
 
+.textInput:disabled {
+  cursor: wait;
+  opacity: 0.8;
+}
+
 .dropZone {
+  display: block;
   margin-bottom: 24px;
   border: 2px dashed rgba(141, 181, 128, 0.3);
   border-radius: 16px;
   background: rgba(141, 181, 128, 0.03);
+  cursor: pointer;
   padding: 48px;
   text-align: center;
 }
@@ -281,6 +300,90 @@
   font-size: 12px;
 }
 
+.fileButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 16px;
+  border-radius: 999px;
+  background: rgba(141, 181, 128, 0.12);
+  color: #5b7a4a;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 18px;
+}
+
+.fileInput {
+  display: none;
+}
+
+.helperText {
+  margin: -8px 0 16px;
+  color: rgba(61, 57, 41, 0.46);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.selectedFile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  border-radius: 14px;
+  background: rgba(141, 181, 128, 0.08);
+  padding: 14px 16px;
+}
+
+.selectedFileName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #4e5f3d;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.secondaryButton {
+  border: 0;
+  border-radius: 999px;
+  background: rgba(61, 57, 41, 0.08);
+  color: #4e5f3d;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 12px;
+}
+
+.secondaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.statusCard {
+  margin-bottom: 18px;
+  border: 1px solid rgba(141, 181, 128, 0.18);
+  border-radius: 18px;
+  background: #fefcf8;
+  padding: 20px;
+}
+
+.statusText {
+  margin: 0;
+  color: #5c5543;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.formError {
+  margin: 0 0 18px;
+  color: #b5534f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .generateButton {
   border: 0;
   border-radius: 14px;
@@ -292,6 +395,12 @@
   font-size: 15px;
   font-weight: 700;
   padding: 16px 36px;
+}
+
+.generateButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+  box-shadow: none;
 }
 
 @keyframes fade-in {
@@ -387,5 +496,10 @@
 
   .dropZone {
     padding: 28px 18px;
+  }
+
+  .selectedFile {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
