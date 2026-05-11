@@ -9,6 +9,9 @@
   position: absolute;
   right: 0;
   bottom: 58px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   min-width: 72px;
   padding: 8px;
   border: 1px solid rgba(141, 181, 128, 0.2);
@@ -32,6 +35,11 @@
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
+}
+
+.routeLinkActive {
+  background: #5b7a4a;
+  color: #fefcf8;
 }
 
 .toggle {

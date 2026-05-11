@@ -1,336 +1,521 @@
-"use client"
+"use client";
 
-import { HelpingCards } from "@/components/cards"
-import { MainCard } from "@/components/main_card"
-import { useEffect, useState } from "react"
+import { DM_Serif_Display, Nunito } from "next/font/google";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 
-const flashcards = [
-    {
-        id: 1,
-        front: "What is photosynthesis?",
-        tag: "Biology",
-        type: "Definition",
-        back: "The process by which green plants convert sunlight, water, and carbon dioxide into glucose and oxygen.",
-        explanation: "Photosynthesis happens in chloroplasts and powers nearly every food chain on Earth.",
-        hook: "Think of plants as solar-powered kitchens that cook sugar from light.",
-        source: "Biology 201 - Chapter 6, Page 142",
-        reviewReason: "Weak area detected - you struggled with plant energy conversion in recent practice.",
-        coachTip: "Pause before revealing and try to visualize the full process from light to glucose.",
-    },
-    {
-        id: 2,
-        front: "Explain the water cycle.",
-        tag: "Earth Science",
-        type: "Scenario",
-        back: "Evaporation, condensation, precipitation, and collection continuously move water through Earth's systems.",
-        explanation: "The water cycle is powered by solar energy and gravity, which keep water moving between land, sea, and air.",
-        hook: "Every drop of water keeps traveling - ocean to cloud to rain to river and back again.",
-        source: "Environmental Science - Lecture 4 Notes",
-        reviewReason: "This concept connects multiple earlier lessons, so it is useful for synthesis practice.",
-        coachTip: "Mentally trace one water droplet through each stage before flipping the card.",
-    },
-    {
-        id: 3,
-        front: "What are the three types of rocks?",
-        tag: "Geology",
-        type: "Classification",
-        back: "Igneous, sedimentary, and metamorphic are the three major rock types.",
-        explanation: "They transform through the rock cycle over long geological timescales.",
-        hook: "Igneous is fire-born, sedimentary is layered, and metamorphic is pressure-changed.",
-        source: "Geology Fundamentals - Section 2.3",
-        reviewReason: "You know the names, but you sometimes mix up how each one forms.",
-        coachTip: "Tie each rock type to its origin story rather than memorizing the list alone.",
-    },
-    {
-        id: 4,
-        front: "Define symbiosis.",
-        tag: "Ecology",
-        type: "Definition",
-        back: "Symbiosis is a close, long-term biological interaction between two different species.",
-        explanation: "It includes mutualism, commensalism, and parasitism depending on how each organism is affected.",
-        hook: "Symbiosis is basically species living in a relationship - helpful, neutral, or harmful.",
-        source: "Ecology Notes - Week 7 Summary",
-        reviewReason: "This idea appears often in short-answer questions and example matching.",
-        coachTip: "Pair the definition with one real example so it is easier to retrieve under pressure.",
-    },
-    {
-        id: 5,
-        front: "What is the greenhouse effect?",
-        tag: "Climate",
-        type: "Concept",
-        back: "Certain gases in the atmosphere trap heat and keep Earth warmer than it would be otherwise.",
-        explanation: "The natural greenhouse effect makes Earth habitable, while excess greenhouse gases intensify warming.",
-        hook: "Earth has a heat-trapping blanket, and extra gases make that blanket thicker.",
-        source: "Climate Science 101 - Lecture 2, Slide 15",
-        reviewReason: "This is a high-priority topic and often appears with real-world application questions.",
-        coachTip: "Separate the natural greenhouse effect from human-driven warming in your mental model.",
-    },
-]
+import { FloatingNav } from "@/components/floating-nav";
+import layoutStyles from "@/components/design-two.module.css";
+
+import styles from "./page.module.css";
+
+const dmSerif = DM_Serif_Display({ subsets: ["latin"], weight: ["400"] });
+const nunito = Nunito({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+type Flashcard = {
+  id: number;
+  front: string;
+  tag: string;
+  type: string;
+  back: string;
+  explanation: string;
+  hook: string;
+  source: string;
+  reviewReason: string;
+  coachTip: string;
+};
+
+type FlashcardDeck = {
+  id: number;
+  title: string;
+  emoji: string;
+  summary: string;
+  date: string;
+  cards: Flashcard[];
+};
+
+type GenerateFlashcardsResponse = {
+  data?: {
+    deck: FlashcardDeck;
+  };
+  error?: string;
+};
 
 const gradeOptions = [
-    { label: "Forgot", className: "bg-[#c0555510] text-[#c05555] border border-[#c0555520]" },
-    { label: "Hard", className: "bg-[#c0904010] text-[#c09040] border border-[#c0904020]" },
-    { label: "Good", className: "bg-[#5a8f5510] text-[#5a8f55] border border-[#5a8f5520]" },
-    { label: "Easy", className: "bg-[#4a8a7a10] text-[#4a8a7a] border border-[#4a8a7a20]" },
-]
+  {
+    label: "Forgot",
+    buttonClassName: styles.gradeButtonDanger,
+    chipClassName: styles.gradeChipDanger,
+  },
+  {
+    label: "Hard",
+    buttonClassName: styles.gradeButtonWarn,
+    chipClassName: styles.gradeChipWarn,
+  },
+  {
+    label: "Good",
+    buttonClassName: styles.gradeButtonSuccess,
+    chipClassName: styles.gradeChipSuccess,
+  },
+  {
+    label: "Easy",
+    buttonClassName: styles.gradeButtonCalm,
+    chipClassName: styles.gradeChipCalm,
+  },
+] as const;
 
-export default function Flashcards() {
-    const [cardIndex, setCardIndex] = useState(0)
-    const [flipped, setFlipped] = useState(false)
-    const [showDetails, setShowDetails] = useState(false)
-    const [grades, setGrades] = useState<Record<number, string>>({})
-    const [skippedCardIds, setSkippedCardIds] = useState<number[]>([])
-    const [sessionComplete, setSessionComplete] = useState(false)
+export default function FlashcardsPage() {
+  const [deckItems, setDeckItems] = useState<FlashcardDeck[]>([]);
+  const [selectedDeckId, setSelectedDeckId] = useState<number | null>(null);
+  const [showNew, setShowNew] = useState(true);
+  const [notes, setNotes] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [cardIndex, setCardIndex] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [grades, setGrades] = useState<Record<number, string>>({});
+  const [skippedCardIds, setSkippedCardIds] = useState<number[]>([]);
+  const [sessionComplete, setSessionComplete] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-    const card = flashcards[cardIndex]
-    const gradedCount = Object.keys(grades).length
-    const reviewedCount = gradedCount + skippedCardIds.length
-    const progress = sessionComplete ? 100 : (reviewedCount / flashcards.length) * 100
-    const cardsLeft = flashcards.length - reviewedCount
-    const weakestTopics = Object.entries(grades)
-        .filter(([, value]) => value === "Forgot" || value === "Hard")
-        .map(([id]) => flashcards.find((entry) => entry.id === Number(id))?.tag)
-        .filter((value): value is string => Boolean(value))
-    const weakestLabel = weakestTopics[0] ?? "None"
+  const activeDeck = deckItems.find((deck) => deck.id === selectedDeckId) ?? null;
+  const activeCards = activeDeck?.cards ?? [];
+  const activeCard = activeCards[cardIndex] ?? null;
+  const gradedCount = Object.keys(grades).length;
+  const reviewedCount = gradedCount + skippedCardIds.length;
+  const progress =
+    sessionComplete || activeCards.length === 0 ? 100 : (reviewedCount / activeCards.length) * 100;
+  const cardsLeft = Math.max(activeCards.length - reviewedCount, 0);
+  const weakestTopics = Object.entries(grades)
+    .filter(([, value]) => value === "Forgot" || value === "Hard")
+    .map(([id]) => activeCards.find((entry) => entry.id === Number(id))?.tag)
+    .filter((value): value is string => Boolean(value));
+  const weakestLabel = weakestTopics[0] ?? "None";
+  const canGenerate = Boolean(notes.trim() || selectedFile) && !isGenerating;
 
-    useEffect(() => {
-        function handleKeyDown(event: KeyboardEvent) {
-            if (event.code === "Space" && !flipped && !sessionComplete) {
-                event.preventDefault()
-                setFlipped(true)
-            }
-        }
-
-        window.addEventListener("keydown", handleKeyDown)
-        return () => window.removeEventListener("keydown", handleKeyDown)
-    }, [flipped, sessionComplete])
-
-    function moveToNextCard() {
-        if (cardIndex === flashcards.length - 1) {
-            setSessionComplete(true)
-            setFlipped(false)
-            setShowDetails(false)
-            return
-        }
-
-        setCardIndex((previousIndex) => previousIndex + 1)
-        setFlipped(false)
-        setShowDetails(false)
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.code === "Space" && !flipped && !sessionComplete && activeCard) {
+        event.preventDefault();
+        setFlipped(true);
+      }
     }
 
-    function handleGrade(grade: string) {
-        setGrades((previousGrades) => ({
-            ...previousGrades,
-            [card.id]: grade,
-        }))
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeCard, flipped, sessionComplete]);
 
-        moveToNextCard()
+  function resetSession() {
+    setCardIndex(0);
+    setFlipped(false);
+    setShowDetails(false);
+    setGrades({});
+    setSkippedCardIds([]);
+    setSessionComplete(false);
+  }
+
+  function clearFile() {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  function handleSelectDeck(deckId: number) {
+    setSelectedDeckId(deckId);
+    setShowNew(false);
+    setGenerationError(null);
+    resetSession();
+  }
+
+  async function handleGenerate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const trimmedNotes = notes.trim();
+    if (!trimmedNotes && !selectedFile) {
+      setGenerationError("Add study notes or upload a file first.");
+      return;
     }
 
-    function handleSkip() {
-        setSkippedCardIds((previousIds) =>
-            previousIds.includes(card.id) ? previousIds : [...previousIds, card.id]
-        )
+    setIsGenerating(true);
+    setGenerationError(null);
 
-        moveToNextCard()
+    try {
+      const formData = new FormData();
+      if (trimmedNotes) {
+        formData.set("notes", trimmedNotes);
+      }
+
+      if (selectedFile) {
+        formData.set("file", selectedFile);
+      }
+
+      const response = await fetch("/api/flashcards/generate", {
+        method: "POST",
+        body: formData,
+      });
+      const body = (await response.json()) as GenerateFlashcardsResponse;
+
+      if (!response.ok || !body.data?.deck) {
+        throw new Error(body.error || "Failed to generate your flashcards.");
+      }
+
+      setDeckItems((current) => [body.data!.deck, ...current]);
+      setSelectedDeckId(body.data.deck.id);
+      setShowNew(false);
+      setNotes("");
+      clearFile();
+      resetSession();
+    } catch (error) {
+      setGenerationError(
+        error instanceof Error ? error.message : "Failed to generate your flashcards.",
+      );
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    setGenerationError(null);
+    setSelectedFile(event.target.files?.[0] ?? null);
+  }
+
+  function moveToNextCard() {
+    if (cardIndex === activeCards.length - 1) {
+      setSessionComplete(true);
+      setFlipped(false);
+      setShowDetails(false);
+      return;
     }
 
-    function resetSession() {
-        setCardIndex(0)
-        setFlipped(false)
-        setShowDetails(false)
-        setGrades({})
-        setSkippedCardIds([])
-        setSessionComplete(false)
+    setCardIndex((previousIndex) => previousIndex + 1);
+    setFlipped(false);
+    setShowDetails(false);
+  }
+
+  function handleGrade(grade: string) {
+    if (!activeCard) {
+      return;
     }
 
-    return (
-        <main className="min-h-screen bg-[#eef1ea] flex justify-center">
-            <div className="fixed top-0 left-0 w-full bg-[#eef1ea]/90 backdrop-blur-sm border-b border-gray-300 px-4 py-3 flex flex-col gap-3 md:px-6 md:flex-row md:items-center md:justify-between z-50">
-                <div className="flex items-center gap-3 md:gap-4 flex-wrap">
-                    <div className="w-2 h-2 bg-green-700 rounded-full" />
+    setGrades((previousGrades) => ({
+      ...previousGrades,
+      [activeCard.id]: grade,
+    }));
 
-                    <div>
-                        <h1 className="text-sm font-semibold">Natural Sciences</h1>
-                        <p className="text-xs text-gray-500">Midterm Review</p>
+    moveToNextCard();
+  }
+
+  function handleSkip() {
+    if (!activeCard) {
+      return;
+    }
+
+    setSkippedCardIds((previousIds) =>
+      previousIds.includes(activeCard.id) ? previousIds : [...previousIds, activeCard.id],
+    );
+
+    moveToNextCard();
+  }
+
+  return (
+    <div className={`${nunito.className} ${layoutStyles.shell}`}>
+      <aside className={layoutStyles.sidebar}>
+        <div className={layoutStyles.brand}>
+          <div className={layoutStyles.brandMark}>🌱</div>
+          <span className={`${dmSerif.className} ${layoutStyles.brandName}`}>LearnLore</span>
+        </div>
+
+        <div className={layoutStyles.sidebarSection}>
+          <button
+            type="button"
+            className={layoutStyles.newButton}
+            disabled={isGenerating}
+            onClick={() => {
+              setShowNew(true);
+              setGenerationError(null);
+              resetSession();
+            }}
+          >
+            ✦ New Flashcards
+          </button>
+        </div>
+
+        <div className={layoutStyles.recentLabelWrap}>
+          <span className={layoutStyles.recentLabel}>Recent</span>
+        </div>
+
+        <div className={layoutStyles.conceptList}>
+          {deckItems.length === 0 ? (
+            <div className={styles.emptyRecent}>No flashcard decks yet.</div>
+          ) : (
+            deckItems.map((deck) => (
+              <button
+                key={deck.id}
+                type="button"
+                className={`${layoutStyles.conceptItem} ${
+                  deck.id === selectedDeckId && !showNew ? layoutStyles.conceptItemSelected : ""
+                }`}
+                onClick={() => handleSelectDeck(deck.id)}
+              >
+                <span className={layoutStyles.conceptEmoji}>{deck.emoji}</span>
+                <span className={layoutStyles.conceptMeta}>
+                  <span className={layoutStyles.conceptTitle}>{deck.title}</span>
+                  <span className={layoutStyles.conceptDate}>{deck.date}</span>
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      </aside>
+
+      <main className={layoutStyles.main}>
+        {showNew || !activeDeck ? (
+          <div className={`${layoutStyles.panel} ${layoutStyles.panelWide}`}>
+            <h2 className={`${dmSerif.className} ${layoutStyles.newIdeaTitle}`}>
+              Build a new deck
+            </h2>
+            <p className={layoutStyles.newIdeaCopy}>
+              Paste study notes or upload one page of material. PDFs use the first page only.
+            </p>
+
+            <form className={layoutStyles.composerForm} onSubmit={handleGenerate}>
+              <textarea
+                value={notes}
+                placeholder="Paste the notes you want converted into flashcards..."
+                className={styles.notesInput}
+                disabled={isGenerating}
+                onChange={(event) => {
+                  setNotes(event.target.value);
+                  setGenerationError(null);
+                }}
+              />
+
+              <label htmlFor="flashcard-file" className={layoutStyles.dropZone}>
+                <p className={layoutStyles.dropEmoji}>🧠</p>
+                <p className={layoutStyles.dropTitle}>Upload a note, slide, or snapshot</p>
+                <p className={layoutStyles.dropMeta}>PDF · TXT · MD · PNG · JPG · WEBP</p>
+                <span className={layoutStyles.fileButton}>Choose file</span>
+              </label>
+
+              <input
+                ref={fileInputRef}
+                id="flashcard-file"
+                type="file"
+                accept=".pdf,.txt,.md,image/png,image/jpeg,image/webp"
+                className={layoutStyles.fileInput}
+                disabled={isGenerating}
+                onChange={handleFileChange}
+              />
+
+              <p className={layoutStyles.helperText}>
+                The deck is returned in a structured format so each card can be parsed cleanly.
+              </p>
+
+              {selectedFile ? (
+                <div className={layoutStyles.selectedFile}>
+                  <span className={layoutStyles.selectedFileName}>{selectedFile.name}</span>
+                  <button
+                    type="button"
+                    className={layoutStyles.secondaryButton}
+                    disabled={isGenerating}
+                    onClick={clearFile}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : null}
+
+              {isGenerating ? (
+                <div className={layoutStyles.statusCard}>
+                  <p className={layoutStyles.eyebrow}>✦ Generating</p>
+                  <p className={layoutStyles.statusText}>
+                    Reading the material, extracting the key ideas, and building the review deck
+                    in one pass.
+                  </p>
+                </div>
+              ) : null}
+
+              {generationError ? <p className={layoutStyles.formError}>{generationError}</p> : null}
+
+              <button
+                type="submit"
+                className={layoutStyles.generateButton}
+                disabled={!canGenerate}
+              >
+                {isGenerating ? "Generating..." : "Generate Flashcards ✦"}
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className={styles.reviewPanel}>
+            {sessionComplete ? (
+              <section className={styles.summaryPanel}>
+                <p className={styles.eyebrow}>Review Complete</p>
+                <h2 className={`${dmSerif.className} ${styles.summaryTitle}`}>
+                  You finished {activeDeck.title}
+                </h2>
+                <p className={styles.summaryCopy}>{activeDeck.cards.length} cards reviewed.</p>
+
+                <div className={styles.summaryStats}>
+                  <div className={styles.summaryStat}>
+                    <span className={styles.statLabel}>Completion</span>
+                    <span className={styles.summaryValue}>100%</span>
+                  </div>
+                  <div className={styles.summaryStat}>
+                    <span className={styles.statLabel}>Cards Graded</span>
+                    <span className={styles.summaryValue}>{gradedCount}</span>
+                  </div>
+                  <div className={styles.summaryStat}>
+                    <span className={styles.statLabel}>Cards Skipped</span>
+                    <span className={styles.summaryValue}>{skippedCardIds.length}</span>
+                  </div>
+                  <div className={styles.summaryStat}>
+                    <span className={styles.statLabel}>Weakest Topic</span>
+                    <span className={styles.summaryValue}>{weakestLabel}</span>
+                  </div>
+                </div>
+
+                <div className={styles.gradeList}>
+                  {Object.entries(grades).map(([id, grade]) => {
+                    const gradedCard = activeDeck.cards.find((entry) => entry.id === Number(id));
+                    const option = gradeOptions.find((entry) => entry.label === grade);
+
+                    return (
+                      <span
+                        key={id}
+                        className={`${styles.gradeChip} ${option?.chipClassName ?? ""}`}
+                      >
+                        {gradedCard?.tag}: {grade}
+                      </span>
+                    );
+                  })}
+
+                  {skippedCardIds.length > 0 ? (
+                    <span className={styles.gradeChipNeutral}>Skipped: {skippedCardIds.length}</span>
+                  ) : null}
+                </div>
+
+                <p className={styles.summaryNote}>{activeDeck.summary}</p>
+
+                <button type="button" className={styles.primaryButton} onClick={resetSession}>
+                  Start Again
+                </button>
+              </section>
+            ) : activeCard ? (
+              <div className={styles.contentGrid}>
+                <section className={styles.cardPanel}>
+                  <div className={styles.cardHeader}>
+                    <div className={styles.cardTags}>
+                      <span className={styles.tag}>{activeCard.tag}</span>
+                      <span className={styles.tagMuted}>{flipped ? "Answer" : activeCard.type}</span>
                     </div>
-
-                    <span className="bg-[#e5e8e1] text-[#4a6741] text-xs px-4 py-1 rounded-full">
-                        Review Queue
+                    <span className={styles.cardCount}>
+                      Card {cardIndex + 1} of {activeCards.length}
                     </span>
-                </div>
+                  </div>
 
-                <div className="flex items-center gap-3 w-full md:w-[30%]">
-                    <span className="text-sm whitespace-nowrap">
-                        {sessionComplete ? flashcards.length : cardIndex + 1} / {flashcards.length}
-                    </span>
-                    <div className="flex-1 h-1.5 bg-gray-300 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-gradient-to-r from-[#8fb583] to-[#6b8f63] rounded-full transition-all duration-300"
-                            style={{ width: `${progress}%` }}
-                        />
-                    </div>
-                </div>
+                  {!flipped ? (
+                    <>
+                      <p className={styles.eyebrow}>Prompt</p>
+                      <h2 className={`${dmSerif.className} ${styles.question}`}>{activeCard.front}</h2>
+                      <p className={styles.helperText}>
+                        Press space or use the button below to reveal.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className={styles.eyebrow}>Answer</p>
+                      <h2 className={`${dmSerif.className} ${styles.answer}`}>{activeCard.back}</h2>
+                      <p className={styles.explanation}>{activeCard.explanation}</p>
 
-                <div className="flex items-center gap-4 self-end md:self-auto">
-                    <span className="text-sm text-gray-600">
-                        {sessionComplete ? "Session complete" : "7 min - 82% confident"}
-                    </span>
-                    <button className="bg-[#e5e8e1] px-4 py-1 rounded-full text-sm">
-                        Pause
-                    </button>
-                </div>
-            </div>
+                      <button
+                        type="button"
+                        className={styles.linkButton}
+                        onClick={() => setShowDetails((previous) => !previous)}
+                      >
+                        {showDetails ? "Hide memory hook" : "Show memory hook and source"}
+                      </button>
 
-            <div className="w-full max-w-[1140px] grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-8 pt-40 md:pt-28 px-4 md:px-6 pb-16">
-                <div className="flex flex-col items-center">
-                    {sessionComplete ? (
-                        <div className="w-full max-w-[600px] bg-[#f7f8f5] rounded-3xl shadow-md px-6 py-8 md:px-10 md:py-10 text-center grid gap-6">
-                            <div className="grid gap-2">
-                                <div className="text-4xl">Session Complete</div>
-                                <h2 className="text-3xl font-semibold text-gray-800">
-                                    You finished this flashcard set
-                                </h2>
-                                <p className="text-sm text-gray-600">
-                                    {flashcards.length} cards reviewed. Here is a quick view of your progress.
-                                </p>
-                            </div>
-
-                            <div className="flex gap-2 justify-center flex-wrap">
-                                {Object.entries(grades).map(([id, grade]) => {
-                                    const gradedCard = flashcards.find((entry) => entry.id === Number(id))
-                                    const option = gradeOptions.find((entry) => entry.label === grade)
-
-                                    return (
-                                        <span
-                                            key={id}
-                                            className={`px-3 py-1 rounded-full text-xs font-medium ${option?.className ?? "bg-[#e5e8e1] text-gray-700"}`}
-                                        >
-                                            {gradedCard?.tag}: {grade}
-                                        </span>
-                                    )
-                                })}
-
-                                {skippedCardIds.length > 0 && (
-                                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#e5e8e1] text-gray-700">
-                                        Skipped: {skippedCardIds.length}
-                                    </span>
-                                )}
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-                                <div className="rounded-2xl bg-[#eef1ea] px-4 py-4">
-                                    <p className="text-xs uppercase tracking-wide text-gray-500">Completion</p>
-                                    <p className="text-2xl font-semibold text-gray-800">100%</p>
-                                </div>
-                                <div className="rounded-2xl bg-[#eef1ea] px-4 py-4">
-                                    <p className="text-xs uppercase tracking-wide text-gray-500">Cards Graded</p>
-                                    <p className="text-2xl font-semibold text-gray-800">{gradedCount}</p>
-                                </div>
-                                <div className="rounded-2xl bg-[#eef1ea] px-4 py-4">
-                                    <p className="text-xs uppercase tracking-wide text-gray-500">Cards Skipped</p>
-                                    <p className="text-2xl font-semibold text-gray-800">{skippedCardIds.length}</p>
-                                </div>
-                                <div className="rounded-2xl bg-[#eef1ea] px-4 py-4">
-                                    <p className="text-xs uppercase tracking-wide text-gray-500">Weakest Topic</p>
-                                    <p className="text-2xl font-semibold text-gray-800">{weakestLabel}</p>
-                                </div>
-                            </div>
-
-                            <p className="text-sm text-[#5a7a50]">
-                                Next review: Tomorrow morning - keep going while recall is still fresh.
-                            </p>
-
-                            <div>
-                                <button
-                                    onClick={resetSession}
-                                    className="bg-[#5f7f5f] text-white px-8 py-3 rounded-2xl font-medium hover:bg-[#4e6d4e] transition"
-                                >
-                                    Start Again
-                                </button>
-                            </div>
+                      {showDetails ? (
+                        <div className={styles.detailsCard}>
+                          <p className={styles.detailText}>{activeCard.hook}</p>
+                          <p className={styles.detailMeta}>{activeCard.source}</p>
                         </div>
+                      ) : null}
+                    </>
+                  )}
+
+                  <div className={styles.actions}>
+                    {!flipped ? (
+                      <>
+                        <button
+                          type="button"
+                          className={styles.primaryButton}
+                          onClick={() => setFlipped(true)}
+                        >
+                          Show Answer
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.secondaryButton}
+                          onClick={handleSkip}
+                        >
+                          Skip
+                        </button>
+                      </>
                     ) : (
-                        <>
-                            <MainCard
-                                subject={card.tag}
-                                type={card.type}
-                                question={card.front}
-                                answer={card.back}
-                                explanation={card.explanation}
-                                hook={card.hook}
-                                source={card.source}
-                                showAnswer={flipped}
-                                showDetails={showDetails}
-                                onToggleDetails={() => setShowDetails((previous) => !previous)}
-                            />
-
-                            <div className="mt-6 flex gap-3 flex-wrap justify-center">
-                                {!flipped ? (
-                                    <>
-                                        <button
-                                            onClick={() => setFlipped(true)}
-                                            className="bg-[#5f7f5f] text-white px-10 py-3 rounded-2xl font-medium hover:bg-[#4e6d4e] transition"
-                                        >
-                                            Show Answer
-                                        </button>
-                                        <button
-                                            onClick={handleSkip}
-                                            className="bg-[#e5e8e1] text-gray-700 px-6 py-3 rounded-2xl text-sm hover:bg-[#d6dad2] transition"
-                                        >
-                                            Skip
-                                        </button>
-                                    </>
-                                ) : (
-                                    gradeOptions.map((option) => (
-                                        <button
-                                            key={option.label}
-                                            onClick={() => handleGrade(option.label)}
-                                            className={`px-7 py-3 rounded-2xl text-sm font-semibold transition hover:-translate-y-0.5 ${option.className}`}
-                                        >
-                                            {option.label}
-                                        </button>
-                                    ))
-                                )}
-                            </div>
-                        </>
+                      gradeOptions.map((option) => (
+                        <button
+                          key={option.label}
+                          type="button"
+                          onClick={() => handleGrade(option.label)}
+                          className={`${styles.gradeButton} ${option.buttonClassName}`}
+                        >
+                          {option.label}
+                        </button>
+                      ))
                     )}
-                </div>
+                  </div>
+                </section>
 
-                <div className="flex flex-col gap-6">
-                    <HelpingCards
-                        heading="Why This Card?"
-                        content={
-                            sessionComplete
-                                ? `You completed all ${flashcards.length} cards in this set.
-Your weakest area today was ${weakestLabel}.`
-                                : card.reviewReason
-                        }
-                    />
+                <aside className={styles.infoColumn}>
+                  <section className={styles.infoCard}>
+                    <p className={styles.eyebrow}>Deck</p>
+                    <p className={styles.infoText}>{activeDeck.summary}</p>
+                    <p className={styles.progressMeta}>{Math.round(progress)}% through this pass</p>
+                  </section>
 
-                    <HelpingCards
-                        heading="Coach"
-                        content={
-                            sessionComplete
-                                ? "Review your Forgot and Hard cards first in the next round for faster gains."
-                                : card.coachTip
-                        }
-                    />
+                  <section className={styles.infoCard}>
+                    <p className={styles.eyebrow}>Why This Card</p>
+                    <p className={styles.infoText}>{activeCard.reviewReason}</p>
+                  </section>
 
-                    <HelpingCards
-                        heading="Session"
-                        content={
-                            sessionComplete
-                                ? `${gradedCount} cards graded
-${skippedCardIds.length} cards skipped
-Ready for another pass`
-                                : `${cardsLeft} cards left
-${weakestTopics.length} weak concepts ahead
-~ 6 mins remaining`
-                        }
-                    />
-                </div>
-            </div>
-        </main>
-    )
+                  <section className={styles.infoCard}>
+                    <p className={styles.eyebrow}>Coach</p>
+                    <p className={styles.infoText}>{activeCard.coachTip}</p>
+                  </section>
+
+                  <section className={styles.infoCard}>
+                    <p className={styles.eyebrow}>Session</p>
+                    <div className={styles.sessionList}>
+                      <span>{cardsLeft} cards left</span>
+                      <span>{weakestTopics.length} weak concepts flagged</span>
+                      <span>{Math.max(activeCards.length - cardIndex - 1, 0)} cards ahead</span>
+                    </div>
+                  </section>
+                </aside>
+              </div>
+            ) : null}
+          </div>
+        )}
+      </main>
+
+      <FloatingNav currentRoute={8} />
+    </div>
+  );
 }
